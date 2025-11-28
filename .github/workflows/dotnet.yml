@@ -28,9 +28,18 @@ jobs:
     - name: Build with MSBuild
       run: msbuild Certify.sln /p:Configuration=Release /p:Platform="Any CPU" /p:RestorePackages=false
       
-    - name: List build output for debugging
+    - name: List build output for debugging (PowerShell)
+      shell: pwsh
       run: |
-        dir Certify\bin\Release\ /s
+        Write-Host "=== Checking build output structure ==="
+        if (Test-Path "Certify\bin\Release") {
+            Get-ChildItem -Path "Certify\bin\Release" -Recurse | Format-Table Name, FullName
+        } else {
+            Write-Host "Release directory not found!"
+            # Check what directories actually exist
+            Write-Host "=== Available directories ==="
+            Get-ChildItem -Path "Certify\bin\" -Recurse -Directory | Format-Table FullName
+        }
       
     - name: Copy build output
       shell: pwsh
@@ -39,20 +48,31 @@ jobs:
         New-Item -ItemType Directory -Path "publish" -Force
         
         # Check which directories actually exist and copy from them
-        $sourceDirs = @(
-            "Certify\bin\Release\net6.0\win-x64",
-            "Certify\bin\Release\net6.0"
+        $possiblePaths = @(
+            "Certify\bin\Release\net6.0\win-x64\publish\*",
+            "Certify\bin\Release\net6.0\win-x64\*",
+            "Certify\bin\Release\net6.0\publish\*", 
+            "Certify\bin\Release\net6.0\*",
+            "Certify\bin\Release\*"
         )
         
-        foreach ($dir in $sourceDirs) {
+        foreach ($path in $possiblePaths) {
+            $dir = Split-Path $path -Parent
             if (Test-Path $dir) {
                 Write-Host "Copying from: $dir"
-                Copy-Item -Path "$dir\*" -Destination "publish\" -Force -Recurse
+                Copy-Item -Path $path -Destination "publish\" -Force -Recurse
             }
         }
       
     - name: List published files
-      run: dir publish\ /s
+      shell: pwsh
+      run: |
+        Write-Host "=== Published files ==="
+        if (Test-Path "publish") {
+            Get-ChildItem -Path "publish" -Recurse | Format-Table Name, Length, LastWriteTime
+        } else {
+            Write-Host "No files published!"
+        }
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
