@@ -28,13 +28,31 @@ jobs:
     - name: Build with MSBuild
       run: msbuild Certify.sln /p:Configuration=Release /p:Platform="Any CPU" /p:RestorePackages=false
       
-    - name: Create publish directory
-      run: mkdir publish
+    - name: List build output for debugging
+      run: |
+        dir Certify\bin\Release\ /s
       
     - name: Copy build output
+      shell: pwsh
       run: |
-        copy Certify\bin\Release\net6.0\win-x64\* publish\ /Y
-        copy Certify\bin\Release\net6.0\* publish\ /Y
+        # Create publish directory
+        New-Item -ItemType Directory -Path "publish" -Force
+        
+        # Check which directories actually exist and copy from them
+        $sourceDirs = @(
+            "Certify\bin\Release\net6.0\win-x64",
+            "Certify\bin\Release\net6.0"
+        )
+        
+        foreach ($dir in $sourceDirs) {
+            if (Test-Path $dir) {
+                Write-Host "Copying from: $dir"
+                Copy-Item -Path "$dir\*" -Destination "publish\" -Force -Recurse
+            }
+        }
+      
+    - name: List published files
+      run: dir publish\ /s
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
