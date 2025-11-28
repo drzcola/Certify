@@ -1,4 +1,4 @@
-# Certify
+# Certify [![Build Certify](https://github.com/drzcola/Certify/actions/workflows/dotnet.yml/badge.svg)](https://github.com/drzcola/Certify/actions/workflows/dotnet.yml)
 
 Certify is a C# tool to enumerate and abuse misconfigurations in Active Directory Certificate Services (AD CS).
 
