@@ -5,50 +5,40 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  release:
-    types: [published]
-
-env:
-  DOTNET_VERSION: '6.0.x'
+  workflow_dispatch:
 
 jobs:
   build:
     name: Build Certify
     runs-on: windows-latest
     
-    strategy:
-      matrix:
-        runtime: [win-x64, win-x86]
-        
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Restore dependencies
-      run: dotnet restore
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
       
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
+    - name: Setup NuGet
+      uses: nuget/setup-nuget@v1
       
-    - name: Publish single file
+    - name: Restore NuGet packages
+      run: nuget restore Certify.sln
+      
+    - name: Build with MSBuild
+      run: msbuild Certify.sln /p:Configuration=Release /p:Platform="Any CPU" /p:RestorePackages=false
+      
+    - name: Create publish directory
+      run: mkdir publish
+      
+    - name: Copy build output
       run: |
-        dotnet publish Certify `
-          --configuration Release `
-          --framework net6.0 `
-          --runtime ${{ matrix.runtime }} `
-          --self-contained true `
-          --output ./publish/${{ matrix.runtime }} `
-          /p:PublishSingleFile=true `
-          /p:IncludeAllContentForSelfExtract=true
-          
+        copy Certify\bin\Release\net6.0\win-x64\* publish\ /Y
+        copy Certify\bin\Release\net6.0\* publish\ /Y
+      
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: Certify-${{ matrix.runtime }}
-        path: ./publish/${{ matrix.runtime }}/
+        name: Certify
+        path: ./publish/
         retention-days: 7
